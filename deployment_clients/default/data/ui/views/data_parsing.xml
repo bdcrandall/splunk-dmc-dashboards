@@ -1,0 +1,93 @@
+<form>
+    <label>Data Parsing</label>
+    <fieldset submitButton="false">
+        <input type="time" token="time_field">
+            <label></label>
+            <default>
+                <earliest>-24h@h</earliest>
+                <latest>now</latest>
+            </default>
+        </input>
+    </fieldset>
+    <row>
+        <panel>
+            <table>
+                <title>Sourcetypes with Warnings for Too Many Lines</title>
+                <search>
+                    <query>index=_internal log_level=WARN component=AggregatorMiningProcessor tag!=splunk-indexer | stats count by data_sourcetype | sort - count | rename data_sourcetype AS Sourcetype, count as Count</query>
+                    <earliest>$time_field.earliest$</earliest>
+                    <latest>$time_field.latest$</latest>
+                </search>
+                <option name="wrap">true</option>
+                <option name="rowNumbers">false</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="count">10</option>
+                <drilldown>
+                    <set token="aggregator_tok">$row.Sourcetype$</set>
+                </drilldown>
+            </table>
+        </panel>
+        <panel>
+            <table>
+                <title>Sourcetypes with Warnings for Lines Too Long</title>
+                <search>
+                    <query>index=_internal log_level=WARN component=LineBreakingProcessor tag!=splunk-indexer | stats count by data_sourcetype | sort - count | rename data_sourcetype AS Sourcetype, count as Count</query>
+                    <earliest>$time_field.earliest$</earliest>
+                    <latest>$time_field.latest$</latest>
+                </search>
+                <option name="wrap">true</option>
+                <option name="rowNumbers">false</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="count">10</option>
+                <drilldown>
+                    <set token="linebreak_tok">$row.Sourcetype$</set>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table>
+                <title>Hosts and Sources with Too Many Lines for sourcetype=$aggregator_tok$</title>
+                <search>
+                    <query>index=_internal log_level=WARN component=AggregatorMiningProcessor data_sourcetype=$aggregator_tok$ | stats count by data_host, data_source | sort - count | rename data_host AS Host, data_source AS Source, count AS Count</query>
+                    <earliest>$time_field.earliest$</earliest>
+                    <latest>$time_field.latest$</latest>
+                </search>
+                <option name="wrap">true</option>
+                <option name="rowNumbers">false</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="count">10</option>
+                <drilldown target="_blank">
+                    <link>
+                        <![CDATA[search?q=sourcetype=$aggregator_tok$ host=$row.Host$ source=$row.Source|s$&earliest=$time_field.earliest$&latest=$time_field.latest$]]>
+                    </link>
+                </drilldown>
+            </table>
+        </panel>
+        <panel>
+            <table>
+                <title>Hosts and Sources with Lines Too Long for sourcetype=$linebreak_tok$</title>
+                <search>
+                    <query>index=_internal log_level=WARN component=LineBreakingProcessor data_sourcetype=$linebreak_tok$ | stats count by data_host, data_source | sort - count | rename data_host AS Host, data_source AS Source, count AS Count</query>
+                    <earliest>$time_field.earliest$</earliest>
+                    <latest>$time_field.latest$</latest>
+                </search>
+                <option name="wrap">true</option>
+                <option name="rowNumbers">false</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="count">10</option>
+                <drilldown target="_blank">
+                    <link>
+                        <![CDATA[search?q=sourcetype=$linebreak_tok$ host=$row.Host$ source=$row.Source|s$&earliest=$time_field.earliest$&latest=$time_field.latest$]]>
+                    </link>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+</form>
+

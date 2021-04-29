@@ -1,0 +1,90 @@
+<form>
+    <label>Index Checker</label>
+    <description>Displays metadata contents for selected index</description>
+    <fieldset submitButton="false" autoRun="true">
+        <input type="dropdown" searchWhenChanged="true" token="index_field">
+            <label>Select Index</label>
+            <search>
+                <query>| eventcount summarize=false index=* | dedup index | fields index</query>
+            </search>
+            <fieldForValue>index</fieldForValue>
+            <fieldForLabel>index</fieldForLabel>
+        </input>
+    </fieldset>
+    <row>
+        <panel>
+            <table>
+                <title>Hosts</title>
+                <search>
+                    <query>| metadata type=hosts index=$index_field$ 
+| eval host=lower(host) 
+| table host, totalCount, firstTime, lastTime, recentTime 
+| convert timeformat="%Y-%m-%d %H:%M:%S" ctime(*Time) 
+| sort host 
+| rename host as Host, firstTime as "Earliest Event", lastTime as "Latest Event", recentTime as "Most Recent Event", totalCount as "Event Count"</query>
+                    <earliest>0</earliest>
+                    <latest></latest>
+                </search>
+                <option name="count">10</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="refresh.display">progressbar</option>
+                <option name="rowNumbers">false</option>
+                <option name="wrap">true</option>
+                <drilldown target="_blank">
+                    <link>search?q=index=$index_field$ host=$row.Host$</link>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table>
+                <title>Sourcetypes</title>
+                <search>
+                    <query>| metadata type=sourcetypes index=$index_field$ 
+| convert timeformat="%Y-%m-%d %H:%M:%S" ctime(*Time) 
+| table sourcetype, totalCount, firstTime, lastTime, recentTime 
+| sort sourcetype 
+| rename sourcetype as Sourcetype, firstTime as "Earliest Event", lastTime as "Latest Event", recentTime as "Most Recent Event", totalCount as "Event Count"</query>
+                    <earliest>0</earliest>
+                    <latest></latest>
+                </search>
+                <option name="count">10</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="refresh.display">progressbar</option>
+                <option name="rowNumbers">false</option>
+                <option name="wrap">true</option>
+                <drilldown target="_blank">
+                    <link>search?q=index=$index_field$ sourcetype=$row.Sourcetype$</link>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table>
+                <title>Sources</title>
+                <search>
+                    <query>| metadata type=sources index=$index_field$ 
+| convert timeformat="%Y-%m-%d %H:%M:%S" ctime(*Time) 
+| table source, totalCount, firstTime, lastTime, recentTime 
+| sort totalCount 
+| rename source as Source, firstTime as "Earliest Event", lastTime as "Latest Event", recentTime as "Most Recent Event", totalCount as "Event Count"</query>
+                    <earliest>0</earliest>
+                    <latest></latest>
+                </search>
+                <option name="count">10</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="refresh.display">progressbar</option>
+                <option name="rowNumbers">false</option>
+                <option name="wrap">true</option>
+                <drilldown target="_blank">
+                    <link>search?q=index=$index_field$ source=$row.Source|s$</link>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+</form>

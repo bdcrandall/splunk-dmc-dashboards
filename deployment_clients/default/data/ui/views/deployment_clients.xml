@@ -1,0 +1,160 @@
+<form theme="dark">
+    <label>Deployment Clients</label>
+    <description>Filterable view of deployment clients.  Can drill down to view client configs.</description>
+    <search id="all_clients">
+        <query>| rest /services/deployment/server/clients splunk_server=* | search hostname=$filter_value$ OR splunk_server=$filter_value$ OR clientName=$filter_value$ OR ip=$filter_value$ OR dns=$filter_value$ OR utsname=$filter_value$</query>
+        <earliest>$time_tok.earliest$</earliest>
+        <latest>$time_tok.latest$</latest>
+    </search>
+    <fieldset submitButton="true" autoRun="false">
+        <input type="text" searchWhenChanged="false" token="filter_value">
+        <label>Filter:</label>
+            <prefix>*</prefix>
+            <suffix>*</suffix>
+            <default></default>
+        </input>
+        <input type="time" token="time_tok">
+            <label></label>
+            <default>
+                <earliest>-24h@h</earliest>
+                <latest>now</latest>
+            </default>
+        </input>
+    </fieldset>
+    <row>
+        <panel>
+            <html>
+                <a href="uf_troubleshooting" target="_blank">UF Troubleshooting Dashboard</a>
+            </html>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <single>
+                <title>Host Count</title>
+                <search base="all_clients">
+                    <query>table hostname, splunk_server, clientName, ip, dns, utsname | stats count</query>
+                </search>
+                <option name="drilldown">none</option>
+            </single>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table>
+                <title>Deployment Clients</title>
+                <search base="all_clients">
+                    <query>eval seconds=round(time() - lastPhoneHomeTime) 
+| eval hostname=upper(hostname), duration=tostring('seconds',"duration") 
+| table hostname, splunk_server, clientName, ip, dns, utsname, duration 
+| rename hostname as Hostname, dns as DNS, ip as IP, clientName as "Client Name", utsname as "Host OS", splunk_server as "Deployment Server", duration as "Duration Since Last Check-In" 
+| sort Hostname 
+| rename account_id as "AWS Account" vpc_id as "AWS VPC" Comment as "Infoblox Comment"</query>
+                </search>
+                <option name="count">10</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="rowNumbers">false</option>
+                <option name="wrap">true</option>
+                <drilldown>
+                    <set token="hostname_tok">$row.Hostname$</set>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table>
+                <title>Forwarder Statistics</title>
+                <search>
+                    <query>`dmc_get_forwarder_tcpin` hostname=$filter_value$ OR sourceIp=$filter_value$
+| eval source_uri = hostname.":".sourcePort
+| eval dest_uri = host.":".destPort
+| eval connection = source_uri."-&gt;".dest_uri
+| stats values(fwdType) as fwdType, values(sourceIp) as sourceIp, latest(version) as version,  values(os) as os, values(arch) as arch, dc(dest_uri) as dest_count, dc(connection) as connection_count, sparkline, avg(tcp_KBps) as avg_tcp_kbps, avg(tcp_eps) as avg_tcp_eps by hostname, guid
+| eval avg_tcp_kbps = round(avg_tcp_kbps, 2)
+| eval avg_tcp_eps = round(avg_tcp_eps, 2)
+| `dmc_rename_forwarder_type(fwdType)`
+| rename hostname as Instance, fwdType as "Forwarder Type", sourceIp as IP, version as "Splunk Version", os as OS, arch as Architecture, guid as GUID, dest_count as "Receiver Count", connection_count as "Connection Count", sparkline as "Events Sparkline", avg_tcp_kbps as "Average KB/s", avg_tcp_eps as "Average Events/s"
+| sort Instance</query>
+                    <earliest>$time_tok.earliest$</earliest>
+                    <latest>$time_tok.latest$</latest>
+                    <sampleRatio>1</sampleRatio>
+                </search>
+                <option name="count">20</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">none</option>
+                <option name="percentagesRow">false</option>
+                <option name="rowNumbers">false</option>
+                <option name="totalsRow">false</option>
+                <option name="wrap">true</option>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table depends="$hostname_tok$">
+                <title>Client Configurations for $hostname_tok$</title>
+                <search>
+                    <query>| rest /services/deployment/server/clients splunk_server=* 
+| search hostname=$hostname_tok$ 
+| transpose 
+| search (column=serverClasses.* "row 1"=enabled) OR column=package OR column=instanceName OR column=utsname OR column=hostname OR column=clientName OR (column=applications.*.timestamp "row 1"=*) 
+| table column,"row 1" 
+| sort - "row 1" 
+| rename column as Attribute, "row 1" as Value</query>
+                    <earliest>$time_tok.earliest$</earliest>
+                    <latest>$time_tok.latest$</latest>
+                </search>
+                <option name="count">20</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="rowNumbers">false</option>
+                <option name="wrap">true</option>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <table>
+                <title>Assigned applications and serverClasses</title>
+                <search base="all_clients">
+                    <query>transpose 
+| search (column=serverClasses.* "row 1"=enabled) OR (column=applications.* "row 1"=Install) OR (column=serverClasses.* "row 2"=enabled) OR (column=applications.* "row 2"=Install) OR (column=serverClasses.* "row 3"=enabled) OR (column=applications.* "row 3"=Install) 
+| rename "row 1" as row1, "row 2" as row2, "row 3" as row3 
+| eval Value=coalesce(row1, row2, row3) 
+| table column, Value 
+| sort - Value 
+| rename column as Attribute</query>
+                </search>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="percentagesRow">false</option>
+                <option name="rowNumbers">false</option>
+                <option name="totalsRow">false</option>
+                <option name="wrap">true</option>
+                <drilldown target="_blank">
+                    <condition>
+                        <set token="groupQuery">$click.value$</set>
+                    </condition>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+    <row depends="$groupQuery$">
+        <panel>
+            <table>
+                <title>Hosts with the application or serverClass $groupQuery$</title>
+                <search>
+                    <query>| rest /services/deployment/server/clients splunk_server=* 
+| search $groupQuery$=* 
+| fields hostname,ip,lastPhoneHomeTime,utsname 
+| eval lastPhoneHomeTime=strftime(lastPhoneHomeTime,"%Y-%m-%d")</query>
+                    <earliest>$time_tok.earliest$</earliest>
+                    <latest>$time_tok.latest$</latest>
+                </search>
+            </table>
+        </panel>
+    </row>
+</form>
+

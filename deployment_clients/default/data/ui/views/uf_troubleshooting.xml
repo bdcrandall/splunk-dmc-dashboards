@@ -1,0 +1,79 @@
+<form theme="dark">
+    <label>UF Troubleshooting</label>
+    <fieldset submitButton="true">
+        <input type="text" token="filter_value">
+            <label></label>
+            <prefix>*</prefix>
+            <suffix>*</suffix>
+        </input>
+        <input type="time" token="time_tok">
+            <label></label>
+            <default>
+                <earliest>-24h@h</earliest>
+                <latest>now</latest>
+            </default>
+        </input>
+    </fieldset>
+    <row>
+        <panel>
+            <title>Forwarding and Deployment Client Info by IP</title>
+            <table>
+                <search>
+                    <query>| rest /services/deployment/server/clients splunk_server=* 
+| search hostname=$filter_value$ OR ip=$filter_value$ OR dns=$filter_value$
+| eval seconds=round(time() - lastPhoneHomeTime) 
+| eval hostname=upper(hostname), duration=tostring('seconds',"duration") 
+| table hostname, splunk_server, ip, utsname, duration 
+| rename hostname as Hostname, dns as DNS, ip as IP, utsname as "Host OS", splunk_server as "Deployment Server", duration as "Duration Since Last Check-In" 
+| append 
+[ search `dmc_get_forwarder_tcpin` hostname=$filter_value$ OR sourceIp=$filter_value$ 
+| eval hostname=upper(hostname), duration=tostring('seconds',"duration") 
+| stats values(sourceIp) as sourceIp, latest(version) as version by hostname, guid 
+| rename hostname as Instance, sourceIp as IP, version as "Splunk Version", guid as GUID ] 
+| stats values(Instance) as "Host-Metrics" values(Hostname) as "Host-DS" values("Deployment Server") as "Deployment Server(s)" values("Host OS") as "Host OS" values("Splunk Version") as "Splunk Version" values(GUID) as GUID values("Duration Since Last Check-In") as "Duration Since Last Check-In" by IP 
+| sort + IP</query>
+                    <earliest>$time_tok.earliest$</earliest>
+                    <latest>$time_tok.latest$</latest>
+                    <sampleRatio>1</sampleRatio>
+                </search>
+                <option name="count">20</option>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">cell</option>
+                <option name="percentagesRow">false</option>
+                <option name="rowNumbers">false</option>
+                <option name="totalsRow">false</option>
+                <option name="wrap">true</option>
+                <drilldown>
+                    <condition field="Host-Metrics">
+                        <set token="host_tok">$click.value2$</set>
+                    </condition>
+                    <condition field="Host-DS">
+                        <set token="host_tok">$click.value2$</set>
+                    </condition>
+                    <condition field="IP"></condition>
+                    <condition field="Deployment Server(s)"></condition>
+                    <condition field="Host OS"></condition>
+                    <condition field="Splunk Version"></condition>
+                    <condition field="GUID"></condition>
+                    <condition field="Duration Since Last Check-In"></condition>
+                </drilldown>
+            </table>
+        </panel>
+    </row>
+    <row>
+        <panel>
+            <title>Data Received from Host</title>
+            <table>
+                <search>
+                    <query>| tstats count where host=$host_tok$ by host index sourcetype</query>
+                    <earliest>$time_tok.earliest$</earliest>
+                    <latest>$time_tok.latest$</latest>
+                </search>
+                <option name="dataOverlayMode">none</option>
+                <option name="drilldown">none</option>
+                <option name="rowNumbers">false</option>
+                <option name="wrap">true</option>
+            </table>
+        </panel>
+    </row>
+</form>

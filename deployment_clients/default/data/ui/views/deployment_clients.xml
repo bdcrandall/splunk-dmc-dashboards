@@ -33,9 +33,10 @@
             <single>
                 <title>Host Count</title>
                 <search base="all_clients">
-                    <query>table hostname, splunk_server, clientName, ip, dns, utsname | stats count</query>
+                    <query>table hostname, splunk_server, clientName, ip, dns, utsname | stats count by splunk_server</query>
                 </search>
                 <option name="drilldown">none</option>
+                <option name="trellis.enabled">1</option>
             </single>
         </panel>
     </row>

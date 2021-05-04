@@ -1,4 +1,4 @@
-<form>
+<form them="dark">
     <label>Data Parsing</label>
     <fieldset submitButton="false">
         <input type="time" token="time_field">
@@ -14,7 +14,7 @@
             <table>
                 <title>Sourcetypes with Warnings for Too Many Lines</title>
                 <search>
-                    <query>index=_internal log_level=WARN component=AggregatorMiningProcessor tag!=splunk-indexer | stats count by data_sourcetype | sort - count | rename data_sourcetype AS Sourcetype, count as Count</query>
+                    <query>index=_internal log_level=WARN component=AggregatorMiningProcessor | stats count by data_sourcetype | sort - count | rename data_sourcetype AS Sourcetype, count as Count</query>
                     <earliest>$time_field.earliest$</earliest>
                     <latest>$time_field.latest$</latest>
                 </search>
@@ -32,7 +32,7 @@
             <table>
                 <title>Sourcetypes with Warnings for Lines Too Long</title>
                 <search>
-                    <query>index=_internal log_level=WARN component=LineBreakingProcessor tag!=splunk-indexer | stats count by data_sourcetype | sort - count | rename data_sourcetype AS Sourcetype, count as Count</query>
+                    <query>index=_internal log_level=WARN component=LineBreakingProcessor | stats count by data_sourcetype | sort - count | rename data_sourcetype AS Sourcetype, count as Count</query>
                     <earliest>$time_field.earliest$</earliest>
                     <latest>$time_field.latest$</latest>
                 </search>

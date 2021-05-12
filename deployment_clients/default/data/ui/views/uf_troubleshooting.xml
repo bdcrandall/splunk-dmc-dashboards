@@ -65,7 +65,7 @@
             <title>Data Received from Host</title>
             <table>
                 <search>
-                    <query>| tstats count where host=$host_tok$ by host index sourcetype</query>
+                    <query>| tstats latest(_time) as most_recent_event count where host=$host_tok$ by host index sourcetype | convert ctime(most_recent_event)</query>
                     <earliest>$time_tok.earliest$</earliest>
                     <latest>$time_tok.latest$</latest>
                 </search>
